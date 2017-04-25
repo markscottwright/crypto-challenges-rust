@@ -1,6 +1,5 @@
 use bytes::*;
 use hexstring::*;
-use std::cmp::Ordering;
 
 static CIPHERTEXTS: &'static str = "0e3647e8592d35514a081243582536ed3de6734059001e3f535ce6271032
 334b041de124f73c18011a50e608097ac308ecee501337ec3e100854201d
@@ -330,30 +329,26 @@ e03555453d1e31775f37331823164c341c09e310463438481019fb0b12fa
 4c071a57e9356ee415103c5c53e254063f2019340969e30a2e381d5b2555
 32042f46431d2c44607934ed180c1028136a5f2b26092e3b2c4e2930585a";
 
-pub fn most_english(ciphertext: &[u8]) -> Option<(u8, f32, Vec<u8>)> {
-    (0..0xff)
-        .map(|k| {
-                 let cleartext = xor1(&ciphertext, k);
-                 let rating = englishness(&cleartext);
-                 (k, rating, cleartext)
-             })
-        .max_by(|x, y| x.1.partial_cmp(&y.1).unwrap_or(Ordering::Less))
-}
-
 pub fn challenge4() {
-    let answers =
-        CIPHERTEXTS
+    let answers = CIPHERTEXTS
             .lines()
             .enumerate()
-            .map(|(num, l)| (num, fromhex(l).unwrap()))
-            .filter_map(|(num, l)| if let Some((k, rating, cleartext)) = most_english(&l) {
-                            Some((num, k, rating, cleartext))
-                        } else {
-                            None
-                        })
-            .filter(|&(_, _, rating, _)| rating > 0.9)
-            .map(|(l, k, rating, cleartext)| (l, k, rating, String::from_utf8(cleartext).unwrap()));
-    let answers_vec = answers.collect::<Vec<_>>();
 
-    println!("{:?}", answers_vec);
+            // decode from hexstring and return linenum
+            .map(|(num, l)| (num, fromhex(l).unwrap()))
+
+            // get linenum, key, rating and best cleartext
+            .map(|(num, l)| {
+                let (k, rating, cleartext) = most_english_xor(&l).unwrap();
+                (num, k, rating, cleartext)
+                })
+
+            // keep highly rated lines
+            .filter(|&(_, _, rating, _)| rating > 0.9);
+
+    let string_answers = answers
+        .map(|(l, k, rating, cleartext)| (l, k, rating, String::from_utf8(cleartext).unwrap()))
+        .collect::<Vec<_>>();
+
+    println!("{:?}", string_answers);
 }
