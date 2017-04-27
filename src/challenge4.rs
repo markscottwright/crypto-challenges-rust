@@ -347,7 +347,7 @@ pub fn challenge4() {
             .filter(|&(_, _, rating, _)| rating > 0.9);
 
     let string_answers = answers
-        .map(|(l, k, rating, cleartext)| (l, k, rating, String::from_utf8(cleartext).unwrap()))
+        .map(|(l, k, rating, cleartext)| (l, k, rating, cleartext))
         .collect::<Vec<_>>();
 
     println!("{:?}", string_answers);

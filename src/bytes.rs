@@ -1,4 +1,3 @@
-use hexstring::fromhex;
 use std::cmp::Ordering;
 
 pub fn xor1(bytes: &[u8], byte: u8) -> Vec<u8> {
@@ -13,6 +12,7 @@ pub fn englishness(cleartext: &[u8]) -> f32 {
                  '0'...'9' => 1,
                  'a'...'z' => 1,
                  'A'...'Z' => 1,
+                 '-' => 1,
                  ' ' => 1,
                  '\'' => 1,
                  '\"' => 1,
@@ -60,6 +60,7 @@ pub fn most_english_xor(ciphertext: &[u8]) -> Option<(u8, f32, Vec<u8>)> {
 
 #[test]
 fn test_repeat_xor() {
+    use hexstring::fromhex;
     let expected = fromhex("0b3637272a2b2e63622c2e69692a23693a2a3c6324202d623d63343c2a26226324272765272a282b2f20430a652e2c652a3124333a653e2b2027630c692b20283165286326302e27282f").unwrap();
     let clear = "Burning 'em, if you ain't quick and nimble
 I go crazy when I hear a cymbal";
