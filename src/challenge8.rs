@@ -1,6 +1,6 @@
 use base64::{decode_config, MIME};
-use aes::decrypt_ecb;
 
+// from 0-1, what percentage of blocks in ciphertext are unique
 pub fn percent_unique_blocks(blocksize: usize, ciphertext: &[u8]) -> f32 {
     let mut unique_blocks = 0;
     let numblocks = ciphertext.len() / blocksize;

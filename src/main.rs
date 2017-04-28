@@ -10,7 +10,7 @@ mod challenge8;
 extern crate base64;
 extern crate crypto;
 
-use std::time::{Instant, Duration};
+use std::time::Instant;
 
 macro_rules! challenge {
     ($x:ident) => (
@@ -21,6 +21,7 @@ macro_rules! challenge {
         println!("{} seconds",
             stop.as_secs() as f32 + (stop.subsec_nanos() as f32 / 1_000_000_000f32));
         println!("===== end:   {} =====", stringify!($x));
+        println!("");
         );
 }
 
