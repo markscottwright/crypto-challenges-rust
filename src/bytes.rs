@@ -35,6 +35,13 @@ pub fn repeat_xor(bytes: &[u8], key: &[u8]) -> Vec<u8> {
     dest
 }
 
+pub fn inplace_xor(mut a: Vec<u8>, b: &[u8]) -> Vec<u8> {
+    for i in 0..a.len() {
+        a[i] = a[i] ^ b[i];
+    }
+    a
+}
+
 pub fn hamming_weight(val: u32) -> u32 {
     let v1 = val - ((val >> 1) & 0x55555555);
     let v2 = (v1 & 0x33333333) + ((v1 >> 2) & 0x33333333);
@@ -70,6 +77,45 @@ pub fn pad(mut bytes: Vec<u8>, blocksize: usize) -> Vec<u8> {
     }
 }
 
+pub fn unpad(mut bytes: Vec<u8>) -> Vec<u8> {
+    let num_padding_bytes = bytes.pop();
+    match num_padding_bytes {
+        Some(n) => {
+            // already removed one above...
+            let new_len = bytes.len() + 1 - n as usize;
+            bytes.resize(new_len, 0);
+            bytes
+        }
+        None => bytes,
+    }
+}
+
+// from 0-1, what percentage of blocks in ciphertext are unique
+pub fn percent_unique_blocks(blocksize: usize, ciphertext: &[u8]) -> f32 {
+    let mut unique_blocks = 0;
+    let numblocks = ciphertext.len() / blocksize;
+    for i in 0..numblocks {
+        let mut is_unique = true;
+        for j in 0..numblocks {
+            if j == i {
+                continue;
+            }
+
+            if ciphertext[(i * blocksize)..((i + 1) * blocksize)] ==
+               ciphertext[(j * blocksize)..((j + 1) * blocksize)] {
+                is_unique = false;
+                break;
+            }
+        }
+        if is_unique {
+            unique_blocks = unique_blocks + 1;
+        }
+    }
+
+    (unique_blocks as f32) / (numblocks as f32)
+}
+
+
 #[test]
 fn test_repeat_xor() {
     use hexstring::fromhex;
@@ -101,4 +147,14 @@ fn test_padding() {
                pad(vec![1, 2, 3, 4, 5], 8).as_slice());
     assert_eq!([1, 2, 3, 4, 5, 6, 7, 8],
                pad(vec![1, 2, 3, 4, 5, 6, 7, 8], 8).as_slice());
+
+    let unpadded = vec![1, 2, 3, 4, 5];
+    assert_eq!(unpadded, unpad(pad(unpadded.clone(), 8)));
+}
+
+#[test]
+fn test_unique() {
+    assert_eq!(0.0, percent_unique_blocks(1, &vec![0, 0, 0]));
+    assert_eq!(1.0, percent_unique_blocks(1, &vec![0, 1, 2]));
+    assert_eq!(0.5, percent_unique_blocks(1, &vec![0, 1, 2, 2]));
 }

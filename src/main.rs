@@ -7,9 +7,12 @@ mod challenge6;
 mod challenge7;
 mod challenge8;
 mod challenge9;
+mod challenge10;
+mod challenge11;
 
 extern crate base64;
 extern crate crypto;
+extern crate rand;
 
 use std::time::Instant;
 
@@ -34,4 +37,6 @@ fn main() {
     challenge!(challenge7);
     challenge!(challenge8);
     challenge!(challenge9);
+    challenge!(challenge10);
+    challenge!(challenge11);
 }

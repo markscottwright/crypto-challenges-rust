@@ -1,8 +1,9 @@
 [package]
-name = "challenge3"
+name = "cryptochallenges"
 version = "0.1.0"
 authors = ["Mark Wright <mwright@cygnacom.com>"]
 
 [dependencies]
-base64 = "0.5.0"
-rust-crypto = "0.2.36"
+base64 = "*"
+rust-crypto = "*"
+rand = "*"

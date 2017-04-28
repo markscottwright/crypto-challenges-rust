@@ -20,7 +20,7 @@ pub fn transpose(data: &[u8], keysize: usize) -> Vec<Vec<u8>> {
 }
 
 pub fn challenge6() {
-    let ciphertext = decode_config(include_str!("challenge-1-6.dat"), MIME).unwrap();
+    let ciphertext = decode_config(include_str!("challenge-6.dat"), MIME).unwrap();
 
     // find key size
     let mut answers = (2..40)
