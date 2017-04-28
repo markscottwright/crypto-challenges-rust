@@ -58,6 +58,7 @@ pub fn most_english_xor(ciphertext: &[u8]) -> Option<(u8, f32, Vec<u8>)> {
         .max_by(|x, y| x.1.partial_cmp(&y.1).unwrap_or(Ordering::Less))
 }
 
+// pkcs7 pad `bytes` to an even `bocksize`
 pub fn pad(mut bytes: Vec<u8>, blocksize: usize) -> Vec<u8> {
     if bytes.len() % blocksize == 0 {
         bytes

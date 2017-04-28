@@ -4,7 +4,7 @@ use crypto::buffer::{BufferResult, WriteBuffer, ReadBuffer};
 pub fn encrypt_ecb(data: &[u8],
                    key: &[u8])
                    -> Result<Vec<u8>, symmetriccipher::SymmetricCipherError> {
-    if key.len() / 8 != 128 || key.len() % 8 != 0 {
+    if key.len() * 8 != 128 {
         return Err(symmetriccipher::SymmetricCipherError::InvalidLength);
     }
 
@@ -74,7 +74,7 @@ pub fn encrypt_ecb(data: &[u8],
 pub fn decrypt_ecb(encrypted_data: &[u8],
                    key: &[u8])
                    -> Result<Vec<u8>, symmetriccipher::SymmetricCipherError> {
-    if key.len() * 8 != 128 || key.len() % 8 != 0 {
+    if key.len() * 8 != 128 {
         return Err(symmetriccipher::SymmetricCipherError::InvalidLength);
     }
     let keysize = aes::KeySize::KeySize128;
@@ -100,4 +100,13 @@ pub fn decrypt_ecb(encrypted_data: &[u8],
     }
 
     Ok(final_result)
+}
+
+#[test]
+fn test() {
+    let data = b"yellow submarine";
+    let key = b"1234567812345678";
+    let encrypted= encrypt_ecb(data, key).unwrap();
+    let decrypted= decrypt_ecb(&encrypted, key).unwrap();
+    assert_eq!(data, decrypted.as_slice());
 }
