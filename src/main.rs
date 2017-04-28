@@ -9,6 +9,7 @@ mod challenge7;
 extern crate base64;
 extern crate crypto;
 
+// macro to put a header and footer around a challenge
 macro_rules! challenge {
     ($x:ident) => (
         println!("===== begin: {} =====", stringify!($x));
