@@ -46,7 +46,7 @@ fn oracle(data: &[u8]) -> Result<OracleResults, symmetriccipher::SymmetricCipher
 
 pub fn challenge11() {
     let blocksize = 16;
-    for i in 0..100 {
+    for _ in 0..100 {
         let cleartext = vec![0;blocksize*10];
         let oracle_results = oracle(&cleartext).unwrap();
         let all_blocks_unique = percent_unique_blocks(blocksize, &oracle_results.ciphertext) > 0.99;
@@ -61,5 +61,5 @@ pub fn challenge11() {
 #[test]
 fn test() {
     let ans = oracle(b"SOME TEST DATA12");
-    assert!(ans.unwrap().len() >= b"SOME TEST DATA12".len() + 10);
+    assert!(ans.unwrap().ciphertext.len() >= b"SOME TEST DATA12".len() + 10);
 }
