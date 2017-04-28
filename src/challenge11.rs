@@ -4,8 +4,8 @@ use aes::{encrypt_cbc, encrypt_ecb};
 use crypto::symmetriccipher;
 use bytes::{pad, percent_unique_blocks};
 
-fn random_aes_key() -> [u8;16] {
-    let mut key = [0;16];
+fn random_aes_key() -> [u8; 16] {
+    let mut key = [0; 16];
     rand::thread_rng().fill_bytes(&mut key);
     key
 }
@@ -17,7 +17,7 @@ fn rand_u8() -> u8 {
 
 struct OracleResults {
     ciphertext: Vec<u8>,
-    is_ecb: bool
+    is_ecb: bool,
 }
 
 fn oracle(data: &[u8]) -> Result<OracleResults, symmetriccipher::SymmetricCipherError> {
@@ -28,7 +28,8 @@ fn oracle(data: &[u8]) -> Result<OracleResults, symmetriccipher::SymmetricCipher
     let mut rng = rand::thread_rng();
     let prefix_len: usize = rng.gen::<usize>() % 5 + 6;
     let suffix_len: usize = rng.gen::<usize>() % 5 + 6;
-    let mut cleartext = (0..prefix_len).map(|_| rand_u8())
+    let mut cleartext = (0..prefix_len)
+        .map(|_| rand_u8())
         .chain(data.iter().cloned())
         .chain((0..suffix_len).map(|_| rand_u8()))
         .collect::<Vec<u8>>();
@@ -37,10 +38,16 @@ fn oracle(data: &[u8]) -> Result<OracleResults, symmetriccipher::SymmetricCipher
     // use cbc/ecb randomly
     if rng.gen() {
         let results = try!(encrypt_cbc(&cleartext, &key, &iv));
-        Ok(OracleResults{ciphertext:results, is_ecb:false})
+        Ok(OracleResults {
+               ciphertext: results,
+               is_ecb: false,
+           })
     } else {
         let results = try!(encrypt_ecb(&cleartext, &key));
-        Ok(OracleResults{ciphertext: results, is_ecb:true})
+        Ok(OracleResults {
+               ciphertext: results,
+               is_ecb: true,
+           })
     }
 }
 

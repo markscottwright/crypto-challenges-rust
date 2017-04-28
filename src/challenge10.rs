@@ -1,5 +1,5 @@
 use base64::{decode_config, MIME};
-use bytes::{unpad};
+use bytes::unpad;
 use aes::decrypt_cbc;
 
 pub fn challenge10() {

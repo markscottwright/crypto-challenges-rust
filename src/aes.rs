@@ -182,8 +182,8 @@ fn test() {
 fn test_mirror() {
     let data = b"yellow submarine1234567812345678";
     let key = b"1234567812345678";
-    
-    let encrypted = encrypt_cbc(data, key, &[0u8;16]).unwrap();
-    let decrypted = decrypt_cbc(&encrypted, key, &[0u8;16]).unwrap();
+
+    let encrypted = encrypt_cbc(data, key, &[0u8; 16]).unwrap();
+    let decrypted = decrypt_cbc(&encrypted, key, &[0u8; 16]).unwrap();
     assert_eq!(data, decrypted.as_slice());
 }
