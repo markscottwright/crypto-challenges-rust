@@ -132,9 +132,10 @@ pub fn crack_ecb_with_known_blocksize_and_suffix
                 end: (blocknum + 1) * blocksize,
             };
             let match_ciphertext_block = &oracle_fn(&match_block).unwrap()[compare_range.clone()];
-            for b in 0..0xff {
-                let varyingpos = test_block.len() - 1;
-                test_block[varyingpos] = b;
+
+            // try ascii first...
+            for b in (65..123).chain((0..65)).chain(123..255) {
+                *(test_block.last_mut().unwrap()) = b;
                 let test_ciphertext_block = &oracle_fn(&test_block).unwrap()[compare_range.clone()];
                 if test_ciphertext_block == match_ciphertext_block {
                     decrypted_suffix.push(b);
