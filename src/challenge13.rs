@@ -12,8 +12,8 @@ fn encrypt(data: &[u8]) -> Vec<u8> {
     encrypt_ecb(&cleartext, &key).unwrap()
 }
 
-fn decrypt(ciphertext: &[u8]) -> Result<HashMap<String, String>,
-    symmetriccipher::SymmetricCipherError> {
+fn decrypt(ciphertext: &[u8])
+           -> Result<HashMap<String, String>, symmetriccipher::SymmetricCipherError> {
 
     let key = [1u8; 16];
     let cleartext = try!(decrypt_ecb(ciphertext, &key));
@@ -55,14 +55,16 @@ pub fn challenge13() {
     // email=1@3456789.adminBBBBBBBBBBB
     let username1_bytes = b"1@3456789.admin\x0b\x0b\x0b\x0b\x0b\x0b\x0b\x0b\x0b\x0b\x0b\x0b\x0b";
     let username1 = String::from_utf8_lossy(username1_bytes);
-    let block_starting_with_admin = &oracle(&username1)[block_size..(block_size*2)];
+    let block_starting_with_admin = &oracle(&username1)[block_size..(block_size * 2)];
 
     // |123456789012345|123456789012345|123456789012345|123456789012345
     // email=mwright1234567890@example.com&uid=10&role=
     let username2 = "mwright1234567890@example.com";
-    let blocks_ending_with_role = &oracle(&username2)[0..(block_size*3)];
+    let blocks_ending_with_role = &oracle(&username2)[0..(block_size * 3)];
 
-    let attack = blocks_ending_with_role.iter().cloned()
+    let attack = blocks_ending_with_role
+        .iter()
+        .cloned()
         .chain(block_starting_with_admin.iter().cloned())
         .collect::<Vec<u8>>();
     let attack_profile = decrypt(&attack);
@@ -80,5 +82,7 @@ fn test() {
                "email=mwright@example.com&uid=10&role=user");
     assert!(!String::from_utf8_lossy(
         &oracle("mwright@example.com")).contains("mwright@example.com"));
-    assert!(decrypt(&oracle("mwright@example.com")).unwrap().contains_key("email"));
+    assert!(decrypt(&oracle("mwright@example.com"))
+                .unwrap()
+                .contains_key("email"));
 }
