@@ -2,6 +2,7 @@ use aes::encrypt_ecb;
 use crypto::symmetriccipher;
 use bytes::pad;
 use base64::decode;
+use std::ops::Range;
 
 fn oracle(data: &[u8]) -> Result<Vec<u8>, symmetriccipher::SymmetricCipherError> {
     let suffix = decode("Um9sbGluJyBpbiBteSA1LjAKV2l0aCBteSByYWctdG9wIGRvd24gc28gbXkg\
@@ -104,37 +105,48 @@ pub fn crack_ecb_with_known_blocksize_and_suffix
 
     let mut decrypted_suffix = Vec::with_capacity(suffix_len);
 
-    for _ in 0..blocksize {
+    loop {
+        let blocknum = decrypted_suffix.len() / blocksize;
 
-        // match block, 0's 
-        // test block,  0's || suffix_so_far || 0..ff
-        let short_block_len = blocksize - decrypted_suffix.len() - 1;
-        let mut match_block = Vec::with_capacity(blocksize);
-        let mut test_block =  Vec::with_capacity(blocksize);
-        for _ in 0..short_block_len {
-            match_block.push(0);
+        for _ in 0..blocksize {
+
+            // match block, 0's
+            // test block,  0's || suffix_so_far || 0..ff
+            let short_block_len = blocksize - (decrypted_suffix.len() % blocksize) - 1;
+            let mut match_block = Vec::with_capacity(blocksize);
+            let mut test_block = Vec::with_capacity(suffix_len);
+            for _ in 0..short_block_len {
+                match_block.push(0);
+                test_block.push(0);
+            }
+            for b in decrypted_suffix.iter().cloned() {
+                test_block.push(b);
+            }
             test_block.push(0);
-        }
-        for b in decrypted_suffix.iter().cloned() {
-            test_block.push(b);
-        }
-        test_block.push(0);
 
-        // Keep varying the last byte until the enciphered block matches the
-        // enciphered block from the one-byte-short match block.  Then we know what
-        // the first byte is in the suffix.
-        let match_ciphertext_block = &oracle_fn(&match_block).unwrap()[0..blocksize];
-        for b in 0..0xff {
-            test_block[blocksize-1] = b;
-            let test_ciphertext_block = &oracle_fn(&test_block).unwrap()[0..blocksize];
-            if test_ciphertext_block == match_ciphertext_block {
-                decrypted_suffix.push(b);
-                break;
+            // Keep varying the last byte until the enciphered block matches the
+            // enciphered block from the one-byte-short match block.  Then we know what
+            // the first byte is in the suffix.
+            let compare_range = Range {
+                start: blocknum * blocksize,
+                end: (blocknum + 1) * blocksize,
+            };
+            let match_ciphertext_block = &oracle_fn(&match_block).unwrap()[compare_range.clone()];
+            for b in 0..0xff {
+                let varyingpos = test_block.len() - 1;
+                test_block[varyingpos] = b;
+                let test_ciphertext_block = &oracle_fn(&test_block).unwrap()[compare_range.clone()];
+                if test_ciphertext_block == match_ciphertext_block {
+                    decrypted_suffix.push(b);
+                    break;
+                }
+            }
+
+            if decrypted_suffix.len() == suffix_len {
+                return Ok(decrypted_suffix);
             }
         }
     }
-
-    Ok(decrypted_suffix)
 }
 
 pub fn challenge12() {
