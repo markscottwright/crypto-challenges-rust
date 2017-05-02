@@ -11,6 +11,7 @@ mod challenge10;
 mod challenge11;
 mod challenge12;
 mod challenge13;
+mod challenge14;
 
 extern crate base64;
 extern crate crypto;
@@ -43,4 +44,5 @@ fn main() {
     challenge!(challenge11);
     challenge!(challenge12);
     challenge!(challenge13);
+    challenge!(challenge14);
 }

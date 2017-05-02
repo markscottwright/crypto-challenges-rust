@@ -55,18 +55,17 @@ pub fn find_blocksize(oracle_fn: fn(&[u8])
     i - first_overflow_pos
 }
 
-pub fn is_ecb(oracle_fn: fn(&[u8]) -> Result<Vec<u8>, symmetriccipher::SymmetricCipherError>,
-              blocksize: usize)
-              -> bool {
+pub fn is_ecb<F>(oracle_fn: F, blocksize: usize) -> bool
+    where F: Fn(&[u8]) -> Result<Vec<u8>, symmetriccipher::SymmetricCipherError>
+{
 
     let ciphertext = oracle_fn(&vec![0u8; blocksize*2]).unwrap();
     ciphertext[0..blocksize] == ciphertext[blocksize..blocksize * 2]
 }
 
-pub fn length_of_suffix(oracle_fn: fn(&[u8])
-                                      -> Result<Vec<u8>, symmetriccipher::SymmetricCipherError>,
-                        blocksize: usize)
-                        -> usize {
+pub fn length_of_suffix<F>(oracle_fn: F, blocksize: usize) -> usize
+    where F: Fn(&[u8]) -> Result<Vec<u8>, symmetriccipher::SymmetricCipherError>
+{
 
     let mut last_cipher_len: Option<usize> = None;
 
@@ -97,11 +96,13 @@ pub fn length_of_suffix(oracle_fn: fn(&[u8])
     panic!("Unexpected error - never found suffix length!")
 }
 
-pub fn crack_ecb_with_known_blocksize_and_suffix
-    (oracle_fn: fn(&[u8]) -> Result<Vec<u8>, symmetriccipher::SymmetricCipherError>,
+pub fn crack_ecb_with_known_blocksize_and_suffix<F>
+    (oracle_fn: F,
      blocksize: usize,
      suffix_len: usize)
-     -> Result<Vec<u8>, symmetriccipher::SymmetricCipherError> {
+     -> Result<Vec<u8>, symmetriccipher::SymmetricCipherError>
+    where F: Fn(&[u8]) -> Result<Vec<u8>, symmetriccipher::SymmetricCipherError>
+{
 
     let mut decrypted_suffix = Vec::with_capacity(suffix_len);
 

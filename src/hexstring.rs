@@ -34,8 +34,54 @@ pub fn fromhex(src: &str) -> Result<Vec<u8>, DecodeError> {
     Ok(dest)
 }
 
+pub fn tohex(src: &[u8]) -> String {
+    let mut dest = String::with_capacity(src.len() * 2);
+    for b in src {
+        dest.push(match b & 0xf0 {
+                      0x00 => '0',
+                      0x10 => '1',
+                      0x20 => '2',
+                      0x30 => '3',
+                      0x40 => '4',
+                      0x50 => '5',
+                      0x60 => '6',
+                      0x70 => '7',
+                      0x80 => '8',
+                      0x90 => '9',
+                      0xa0 => 'a',
+                      0xb0 => 'b',
+                      0xc0 => 'c',
+                      0xd0 => 'd',
+                      0xe0 => 'e',
+                      0xf0 => 'f',
+                      _ => panic!("numbers no longer working"),
+                  });
+        dest.push(match b & 0xf {
+                      0x0 => '0',
+                      0x1 => '1',
+                      0x2 => '2',
+                      0x3 => '3',
+                      0x4 => '4',
+                      0x5 => '5',
+                      0x6 => '6',
+                      0x7 => '7',
+                      0x8 => '8',
+                      0x9 => '9',
+                      0xa => 'a',
+                      0xb => 'b',
+                      0xc => 'c',
+                      0xd => 'd',
+                      0xe => 'e',
+                      0xf => 'f',
+                      _ => panic!("numbers no longer working"),
+                  });
+    }
+    dest
+}
+
 #[test]
 fn test() {
     assert_eq!(fromhex("aabbccXX"), Err(DecodeError));
     assert_eq!(fromhex("aabbccdd"), Ok(vec![0xaa, 0xbb, 0xcc, 0xdd]));
+    assert_eq!(tohex(&fromhex("aabbccdd").unwrap()), "aabbccdd");
 }

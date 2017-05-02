@@ -54,6 +54,8 @@ pub fn challenge13() {
     // |123456789012345|123456789012345
     // email=1@3456789.adminBBBBBBBBBBB
     let username1_bytes = b"1@3456789.admin\x0b\x0b\x0b\x0b\x0b\x0b\x0b\x0b\x0b\x0b\x0b\x0b\x0b";
+    println!("{}", username1_bytes.len() % block_size);
+    println!("{}", block_size - (username1_bytes.len() % block_size));
     let username1 = String::from_utf8_lossy(username1_bytes);
     let block_starting_with_admin = &oracle(&username1)[block_size..(block_size * 2)];
 
