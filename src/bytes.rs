@@ -1,7 +1,18 @@
+use rand;
+use rand::Rng;
 use std::cmp::Ordering;
 
 pub fn xor1(bytes: &[u8], byte: u8) -> Vec<u8> {
     bytes.iter().map(|x| x ^ byte).collect()
+}
+
+pub fn rand_u8() -> u8 {
+    let mut rng1 = rand::thread_rng();
+    rng1.gen::<u8>()
+}
+
+pub fn random_bytes(n: usize) -> Vec<u8> {
+    (0..n).map(|_| rand_u8()).collect::<Vec<u8>>()
 }
 
 // what percentage of characters are likely to be found in english text?
@@ -67,14 +78,10 @@ pub fn most_english_xor(ciphertext: &[u8]) -> Option<(u8, f32, Vec<u8>)> {
 
 // pkcs7 pad `bytes` to an even `bocksize`
 pub fn pad(mut bytes: Vec<u8>, blocksize: usize) -> Vec<u8> {
-    if bytes.len() % blocksize == 0 {
-        bytes
-    } else {
-        let padding_bytes = blocksize - (bytes.len() % blocksize);
-        let new_len = bytes.len() + padding_bytes;
-        bytes.resize(new_len, padding_bytes as u8);
-        bytes
-    }
+    let padding_bytes = blocksize - (bytes.len() % blocksize);
+    let new_len = bytes.len() + padding_bytes;
+    bytes.resize(new_len, padding_bytes as u8);
+    bytes
 }
 
 pub fn unpad(mut bytes: Vec<u8>) -> Vec<u8> {
@@ -88,6 +95,20 @@ pub fn unpad(mut bytes: Vec<u8>) -> Vec<u8> {
         }
         None => bytes,
     }
+}
+
+pub fn valid_padding(bytes: &[u8], blocksize: usize) -> bool {
+    let bytes_len = bytes.len();
+    if bytes_len % blocksize != 0 {
+        return false;
+    }
+    let pad_value = bytes[bytes_len - 1];
+    if pad_value > blocksize as u8 {
+        return false;
+    }
+    ((bytes_len - (pad_value as usize))..(bytes_len - 1))
+        .map(|i| bytes[i])
+        .all(|v| v == pad_value)
 }
 
 // from 0-1, what percentage of blocks in ciphertext are unique
@@ -145,7 +166,7 @@ fn test_hamming_distance() {
 fn test_padding() {
     assert_eq!([1, 2, 3, 4, 5, 3, 3, 3],
                pad(vec![1, 2, 3, 4, 5], 8).as_slice());
-    assert_eq!([1, 2, 3, 4, 5, 6, 7, 8],
+    assert_eq!([1, 2, 3, 4, 5, 6, 7, 8, 8, 8, 8, 8, 8, 8, 8, 8],
                pad(vec![1, 2, 3, 4, 5, 6, 7, 8], 8).as_slice());
 
     let unpadded = vec![1, 2, 3, 4, 5];
@@ -157,4 +178,16 @@ fn test_unique() {
     assert_eq!(0.0, percent_unique_blocks(1, &vec![0, 0, 0]));
     assert_eq!(1.0, percent_unique_blocks(1, &vec![0, 1, 2]));
     assert_eq!(0.5, percent_unique_blocks(1, &vec![0, 1, 2, 2]));
+}
+
+#[test]
+fn test_valid_padding() {
+    for blocksize in [8, 16, 32].iter() {
+        for _ in 0..1000 {
+            let len = rand_u8() as usize;
+            let bytes = random_bytes(len);
+            let padded = pad(bytes, *blocksize);
+            assert!(valid_padding(&padded, *blocksize));
+        }
+    }
 }

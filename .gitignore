@@ -1,4 +1,5 @@
 *.bk
 *.swp
 Cargo.lock
+rusty-tags.vi
 target/

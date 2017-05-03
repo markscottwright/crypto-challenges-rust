@@ -1,10 +1,8 @@
 use aes::encrypt_ecb;
 use crypto::symmetriccipher;
-use bytes::pad;
+use bytes::{pad, rand_u8, random_bytes};
 use base64::decode;
 use hexstring::{tohex, fromhex};
-use rand;
-use rand::Rng;
 use challenge12;
 
 fn oracle(data: &[u8]) -> Result<Vec<u8>, symmetriccipher::SymmetricCipherError> {
@@ -26,15 +24,6 @@ fn oracle(data: &[u8]) -> Result<Vec<u8>, symmetriccipher::SymmetricCipherError>
     cleartext = pad(cleartext, key.len());
 
     encrypt_ecb(&cleartext, &key)
-}
-
-fn rand_u8() -> u8 {
-    let mut rng1 = rand::thread_rng();
-    rng1.gen::<u8>()
-}
-
-pub fn random_bytes(n: usize) -> Vec<u8> {
-    (0..n).map(|_| rand_u8()).collect::<Vec<u8>>()
 }
 
 fn find_prefix_len(oracle_fn: fn(&[u8]) -> Result<Vec<u8>, symmetriccipher::SymmetricCipherError>,

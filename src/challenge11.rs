@@ -2,17 +2,12 @@ use rand;
 use rand::Rng;
 use aes::{encrypt_cbc, encrypt_ecb};
 use crypto::symmetriccipher;
-use bytes::{pad, percent_unique_blocks};
+use bytes::{pad, percent_unique_blocks, rand_u8};
 
 fn random_aes_key() -> [u8; 16] {
     let mut key = [0; 16];
     rand::thread_rng().fill_bytes(&mut key);
     key
-}
-
-fn rand_u8() -> u8 {
-    let mut rng1 = rand::thread_rng();
-    rng1.gen::<u8>()
 }
 
 struct OracleResults {
