@@ -1,8 +1,8 @@
 use aes::encrypt_ecb;
 use crypto::symmetriccipher;
-use bytes::{pad, rand_u8, random_bytes};
+use bytes::pad;
 use base64::decode;
-use hexstring::{tohex, fromhex};
+use hexstring::fromhex;
 use challenge12;
 
 fn oracle(data: &[u8]) -> Result<Vec<u8>, symmetriccipher::SymmetricCipherError> {
@@ -63,8 +63,6 @@ fn find_prefix_len(oracle_fn: fn(&[u8]) -> Result<Vec<u8>, symmetriccipher::Symm
 }
 
 pub fn challenge14() {
-    println!("random bytes = {}\n",
-             tohex(&random_bytes(rand_u8() as usize)));
     let blocksize = challenge12::find_blocksize(oracle);
     let prefix_len = find_prefix_len(oracle, blocksize);
 
