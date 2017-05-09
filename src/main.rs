@@ -28,13 +28,13 @@ macro_rules! challenge {
     ($x:ident) => (
         let challenge_num = env::args().nth(1);
         if challenge_num.is_none() || challenge_num.unwrap() == stringify!($x) {
-            println!("===== begin: {} =====", stringify!($x));
+            println!("================================ begin: {} ===========================", stringify!($x));
             let start = Instant::now();
             $x::$x();
             let stop = start.elapsed();
             println!("{} seconds",
                 stop.as_secs() as f32 + (stop.subsec_nanos() as f32 / 1_000_000_000f32));
-            println!("===== end:   {} =====", stringify!($x));
+            println!("================================ end:   {} ===========================", stringify!($x));
             println!("");
         });
 }

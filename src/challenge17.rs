@@ -1,14 +1,21 @@
-use base64::decode;
 use aes::{encrypt_cbc, decrypt_cbc};
+use base64::decode;
 use bytes::{pad, unpad, valid_padding};
-use rand;
 use rand::distributions::{IndependentSample, Range};
+use rand;
+use std::cell::RefCell;
 use std::iter::once;
 
 const BLOCK_SIZE: usize = 16;
+
+// super-secret random values
 static KEY: [u8; BLOCK_SIZE] = [1; BLOCK_SIZE];
 static IV: [u8; BLOCK_SIZE] = [0; BLOCK_SIZE];
 
+// keep global count of every time we call ciphertext_padding_valid
+thread_local!(static NUM_COMPARISONS: RefCell<u32> = RefCell::new(0));
+
+// return (random encrypted string, iv)
 fn get_encrypted_string() -> (Vec<u8>, Vec<u8>) {
 
     // encrypt the strings
@@ -35,13 +42,21 @@ fn get_encrypted_string() -> (Vec<u8>, Vec<u8>) {
     ((&plaintexts[i]).clone(), IV.to_vec())
 }
 
+// decrypt ciphertext and return if the cleartext is propertly padded
 fn ciphertext_padding_valid(ciphertext: &[u8], iv: &[u8]) -> bool {
+    NUM_COMPARISONS.with(|num| {
+                             let prev = *num.borrow();
+                             *num.borrow_mut() = prev + 1;
+                         });
+
     match decrypt_cbc(ciphertext, &KEY, &iv) {
         Ok(cleartext) => valid_padding(&cleartext, BLOCK_SIZE),
         Err(_) => false,
     }
 }
 
+// create a block that will turn into a validly padded block when xor'ed with
+// the next cleartext (if guess is right).  cleartext is 'cleartext so far'
 fn assemble_attack_block(pre_block: &[u8], cleartext: &[u8], guess: u8) -> Vec<u8> {
     // n is the padding we're working on
     let n = cleartext.len() + 1;
@@ -64,9 +79,18 @@ fn assemble_attack_block(pre_block: &[u8], cleartext: &[u8], guess: u8) -> Vec<u
         .collect::<Vec<_>>()
 }
 
-pub fn decrypt_remaining_block_one(attack_ciphertext: &[u8], iv: &[u8], cleartext: &[u8]) -> Option<Vec<u8>> {
+pub fn decrypt_remaining_block_one(attack_ciphertext: &[u8],
+                                   iv: &[u8],
+                                   cleartext: &[u8])
+                                   -> Option<Vec<u8>> {
 
-    for guess in (0..0xff).rev() {
+    // ascii first, and reverse the order of padding bytes - 1 is potential
+    // mis-guess that will slow down the decryption process, so do it after the
+    // other possible padding values
+    for guess in (97..123)
+            .chain((65..97))
+            .chain((0..65).rev())
+            .chain(123..255) {
 
         let attack_iv = assemble_attack_block(iv, cleartext, guess);
 
@@ -79,7 +103,9 @@ pub fn decrypt_remaining_block_one(attack_ciphertext: &[u8], iv: &[u8], cleartex
                 return Some(updated_cleartext);
             }
             // more to do
-            else if let Some(c) = decrypt_remaining_block_one(&attack_ciphertext, &iv, &updated_cleartext) {
+            else if let Some(c) = decrypt_remaining_block_one(&attack_ciphertext,
+                                                                &iv,
+                                                                &updated_cleartext) {
                 return Some(c);
             }
         }
@@ -101,18 +127,25 @@ pub fn decrypt_block(block_num: usize,
     let prev_block_start = (block_num - 1) * BLOCK_SIZE;
     let prev_block = &ciphertext[prev_block_start..prev_block_start + BLOCK_SIZE];
 
-    print!("\rblock_num = {} block_cleartext {:?} ", block_num, block_cleartext);
-    let mut attack_ciphertext = ciphertext.iter().cloned()
-        .take((block_num+1)*BLOCK_SIZE)
+    // chop off ciphertext after the current block
+    let mut attack_ciphertext = ciphertext
+        .iter()
+        .cloned()
+        .take((block_num + 1) * BLOCK_SIZE)
         .collect::<Vec<_>>();
 
-    for guess in (0..0xff).rev() {
+    // ascii first, and reverse the order of padding bytes - 1 is potential
+    // miss-guess that will slow down the decryption process
+    for guess in (97..123)
+            .chain((65..97))
+            .chain((0..65).rev())
+            .chain(123..255) {
 
         // attack_ciphertext = [previous blocks] [attack_prev_block] [current block]
         let attack_prev_block = assemble_attack_block(prev_block, &block_cleartext, guess);
 
         for i in 0..BLOCK_SIZE {
-            attack_ciphertext[i+prev_block_start] = attack_prev_block[i];
+            attack_ciphertext[i + prev_block_start] = attack_prev_block[i];
         }
 
         if ciphertext_padding_valid(&attack_ciphertext, &iv) {
@@ -132,7 +165,13 @@ pub fn decrypt_block(block_num: usize,
 
 pub fn decrypt_block_one(ciphertext: &[u8], iv: &[u8]) -> Vec<u8> {
     let attack_ciphertext = &ciphertext[0..BLOCK_SIZE];
-    for guess in 0..0xff {
+
+    // ascii first, and reverse the order of padding bytes - 1 is potential
+    // miss-guess that will slow down the decryption process
+    for guess in (97..123)
+            .chain((65..97))
+            .chain((0..65).rev())
+            .chain(123..255) {
         let attack_iv = assemble_attack_block(&iv, &Vec::new(), guess);
         if ciphertext_padding_valid(&attack_ciphertext, &attack_iv) {
             let cleartext = vec![guess];
@@ -157,14 +196,20 @@ pub fn decrypt_remaining_blocks(ciphertext: &[u8], iv: &[u8], block_1_cleartext:
 
 pub fn challenge17() {
     let (ciphertext, iv) = get_encrypted_string();
-    //let (ciphertext, iv) = ([30, 159, 129, 7, 28, 253, 198, 188, 106, 136, 253,
-    //144, 25, 70, 211, 147, 182, 248, 199, 161, 10, 8, 209, 175, 28, 212, 157,
-    //125, 81, 58, 203, 202, 43, 224, 22, 101, 51, 233, 146, 10, 99, 13, 107, 150,
-    //75, 2, 232, 164], IV);
-    
+
+    // This one is problematic!  Seems to just be unlucky - it got stuck unless I
+    // reversed the order of guessing.
+    //    let (ciphertext, iv) = ([30, 159, 129, 7, 28, 253, 198, 188, 106, 136, 253,
+    //    144, 25, 70, 211, 147, 182, 248, 199, 161, 10, 8, 209, 175, 28, 212, 157,
+    //    125, 81, 58, 203, 202, 43, 224, 22, 101, 51, 233, 146, 10, 99, 13, 107, 150,
+    //    75, 2, 232, 164], IV);
+
     let block_one = decrypt_block_one(&ciphertext, &iv);
     let cleartext = decrypt_remaining_blocks(&ciphertext, &iv, &block_one);
     println!("{}", String::from_utf8_lossy(&unpad(cleartext)));
+    NUM_COMPARISONS.with(|num| {
+                             println!("{} comparisons to find", *num.borrow());
+                         });
 }
 
 #[test]
