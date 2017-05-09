@@ -64,7 +64,7 @@ fn assemble_attack_block(pre_block: &[u8], cleartext: &[u8], guess: u8) -> Vec<u
         .collect::<Vec<_>>()
 }
 
-pub fn decrypt_remaining(attack_ciphertext: &[u8], iv: &[u8], cleartext: &[u8]) -> Option<Vec<u8>> {
+pub fn decrypt_remaining_block_one(attack_ciphertext: &[u8], iv: &[u8], cleartext: &[u8]) -> Option<Vec<u8>> {
 
     for guess in 0..0xff {
 
@@ -79,10 +79,8 @@ pub fn decrypt_remaining(attack_ciphertext: &[u8], iv: &[u8], cleartext: &[u8]) 
                 return Some(updated_cleartext);
             }
             // more to do
-            else {
-                if let Some(c) = decrypt_remaining(&attack_ciphertext, &iv, &updated_cleartext) {
-                    return Some(c);
-                }
+            else if let Some(c) = decrypt_remaining_block_one(&attack_ciphertext, &iv, &updated_cleartext) {
+                return Some(c);
             }
         }
     }
@@ -103,25 +101,19 @@ pub fn decrypt_block(block_num: usize,
     let prev_block_start = (block_num - 1) * BLOCK_SIZE;
     let prev_block = &ciphertext[prev_block_start..prev_block_start + BLOCK_SIZE];
 
-    for guess in 0..0xff {
+    print!("\rblock_num = {} block_cleartext {:?} ", block_num, block_cleartext);
+    let mut attack_ciphertext = ciphertext.iter().cloned()
+        .take((block_num+1)*BLOCK_SIZE)
+        .collect::<Vec<_>>();
+
+    for guess in (0..0xff).rev() {
 
         // attack_ciphertext = [previous blocks] [attack_prev_block] [current block]
         let attack_prev_block = assemble_attack_block(prev_block, &block_cleartext, guess);
-        let mut attack_ciphertext = Vec::with_capacity((block_num + 1) * BLOCK_SIZE);
-        for b in ciphertext.iter().cloned().take(prev_block_start) {
-            attack_ciphertext.push(b);
-        }
-        for b in attack_prev_block {
-            attack_ciphertext.push(b);
-        }
-        for b in ciphertext
-                .iter()
-                .cloned()
-                .skip(prev_block_start + BLOCK_SIZE)
-                .take(BLOCK_SIZE) {
-            attack_ciphertext.push(b);
-        }
 
+        for i in 0..BLOCK_SIZE {
+            attack_ciphertext[i+prev_block_start] = attack_prev_block[i];
+        }
 
         if ciphertext_padding_valid(&attack_ciphertext, &iv) {
             let mut cleartext = block_cleartext.to_vec();
@@ -144,7 +136,7 @@ pub fn decrypt_block_one(ciphertext: &[u8], iv: &[u8]) -> Vec<u8> {
         let attack_iv = assemble_attack_block(&iv, &Vec::new(), guess);
         if ciphertext_padding_valid(&attack_ciphertext, &attack_iv) {
             let cleartext = vec![guess];
-            if let Some(c) = decrypt_remaining(&attack_ciphertext, &iv, &cleartext) {
+            if let Some(c) = decrypt_remaining_block_one(&attack_ciphertext, &iv, &cleartext) {
                 return c;
             }
         }
@@ -156,7 +148,8 @@ pub fn decrypt_block_one(ciphertext: &[u8], iv: &[u8]) -> Vec<u8> {
 pub fn decrypt_remaining_blocks(ciphertext: &[u8], iv: &[u8], block_1_cleartext: &[u8]) -> Vec<u8> {
     let mut cleartext = block_1_cleartext.to_vec();
     for block_num in 1..ciphertext.len() / BLOCK_SIZE {
-        cleartext.append(&mut decrypt_block(block_num, ciphertext, iv, &vec![]).unwrap());
+        let clear_block = &mut decrypt_block(block_num, ciphertext, iv, &vec![]).unwrap();
+        cleartext.append(clear_block);
     }
 
     cleartext
@@ -164,6 +157,11 @@ pub fn decrypt_remaining_blocks(ciphertext: &[u8], iv: &[u8], block_1_cleartext:
 
 pub fn challenge17() {
     let (ciphertext, iv) = get_encrypted_string();
+    //let (ciphertext, iv) = ([30, 159, 129, 7, 28, 253, 198, 188, 106, 136, 253,
+    //144, 25, 70, 211, 147, 182, 248, 199, 161, 10, 8, 209, 175, 28, 212, 157,
+    //125, 81, 58, 203, 202, 43, 224, 22, 101, 51, 233, 146, 10, 99, 13, 107, 150,
+    //75, 2, 232, 164], IV);
+    
     let block_one = decrypt_block_one(&ciphertext, &iv);
     let cleartext = decrypt_remaining_blocks(&ciphertext, &iv, &block_one);
     println!("{}", String::from_utf8_lossy(&unpad(cleartext)));
