@@ -66,7 +66,7 @@ fn assemble_attack_block(pre_block: &[u8], cleartext: &[u8], guess: u8) -> Vec<u
 
 pub fn decrypt_remaining_block_one(attack_ciphertext: &[u8], iv: &[u8], cleartext: &[u8]) -> Option<Vec<u8>> {
 
-    for guess in 0..0xff {
+    for guess in (0..0xff).rev() {
 
         let attack_iv = assemble_attack_block(iv, cleartext, guess);
 
