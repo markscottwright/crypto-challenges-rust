@@ -199,10 +199,13 @@ pub fn challenge17() {
 
     // This one is problematic!  Seems to just be unlucky - it got stuck unless I
     // reversed the order of guessing.
+    //
     //    let (ciphertext, iv) = ([30, 159, 129, 7, 28, 253, 198, 188, 106, 136, 253,
     //    144, 25, 70, 211, 147, 182, 248, 199, 161, 10, 8, 209, 175, 28, 212, 157,
     //    125, 81, 58, 203, 202, 43, 224, 22, 101, 51, 233, 146, 10, 99, 13, 107, 150,
     //    75, 2, 232, 164], IV);
+    //
+    // Why?
 
     let block_one = decrypt_block_one(&ciphertext, &iv);
     let cleartext = decrypt_remaining_blocks(&ciphertext, &iv, &block_one);

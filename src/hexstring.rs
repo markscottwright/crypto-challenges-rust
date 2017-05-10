@@ -34,6 +34,7 @@ pub fn fromhex(src: &str) -> Result<Vec<u8>, DecodeError> {
     Ok(dest)
 }
 
+#[allow(dead_code)]
 pub fn tohex(src: &[u8]) -> String {
     let mut dest = String::with_capacity(src.len() * 2);
     for b in src {

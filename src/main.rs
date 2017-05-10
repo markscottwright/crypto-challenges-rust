@@ -15,10 +15,12 @@ mod challenge14;
 mod challenge15;
 mod challenge16;
 mod challenge17;
+mod challenge18;
 
 extern crate base64;
 extern crate crypto;
 extern crate rand;
+extern crate byteorder;
 
 use std::time::Instant;
 use std::env;
@@ -54,4 +56,5 @@ fn main() {
     challenge!(challenge15);
     challenge!(challenge16);
     challenge!(challenge17);
+    challenge!(challenge18);
 }

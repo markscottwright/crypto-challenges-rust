@@ -11,6 +11,7 @@ pub fn rand_u8() -> u8 {
     rng1.gen::<u8>()
 }
 
+#[allow(dead_code)]
 pub fn random_bytes(n: usize) -> Vec<u8> {
     (0..n).map(|_| rand_u8()).collect::<Vec<u8>>()
 }

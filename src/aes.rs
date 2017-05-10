@@ -2,6 +2,8 @@ use bytes::{inplace_xor, repeat_xor};
 use crypto::{symmetriccipher, buffer, aes, blockmodes};
 use crypto::buffer::{BufferResult, WriteBuffer, ReadBuffer};
 
+const BLOCK_SIZE: usize = 16;
+
 pub fn encrypt_ecb(data: &[u8],
                    key: &[u8])
                    -> Result<Vec<u8>, symmetriccipher::SymmetricCipherError> {
@@ -167,6 +169,34 @@ pub fn encrypt_cbc(cleartext: &[u8],
         }
         None => Ok(ciphertext),
     }
+}
+
+fn serialize_little_endian(val: u64, dest: &mut [u8]) {
+    dest[0] = (val & 0xff) as u8;
+    dest[1] = ((val >> 8) & 0xff) as u8;
+    dest[2] = ((val >> 16) & 0xff) as u8;
+    dest[3] = ((val >> 24) & 0xff) as u8;
+    dest[4] = ((val >> 32) & 0xff) as u8;
+    dest[5] = ((val >> 40) & 0xff) as u8;
+    dest[6] = ((val >> 48) & 0xff) as u8;
+    dest[7] = ((val >> 56) & 0xff) as u8;
+}
+
+pub fn decrypt_crt(ciphertext: &[u8],
+                   key: &[u8],
+                   nonce: u64)
+                   -> Result<Vec<u8>, symmetriccipher::SymmetricCipherError> {
+
+    let mut cleartext = Vec::with_capacity(ciphertext.len());
+    let mut counter = [0u8; BLOCK_SIZE];
+    serialize_little_endian(nonce, &mut counter[0..8]);
+    for (i, block) in ciphertext.chunks(BLOCK_SIZE).enumerate() {
+        serialize_little_endian(i as u64, &mut counter[8..]);
+        let encrypted_counter = encrypt_ecb(&counter, &key).unwrap();
+        cleartext.append(&mut repeat_xor(block, &encrypted_counter));
+    }
+
+    Ok(cleartext)
 }
 
 #[test]
