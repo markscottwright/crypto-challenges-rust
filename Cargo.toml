@@ -7,4 +7,3 @@ authors = ["Mark Wright <mwright@cygnacom.com>"]
 base64 = "*"
 rust-crypto = "*"
 rand = "*"
-byteorder = "*"
