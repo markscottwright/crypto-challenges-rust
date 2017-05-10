@@ -11,8 +11,9 @@ fn oracle(data: &[u8]) -> Result<Vec<u8>, symmetriccipher::SymmetricCipherError>
          dXN0IHRvIHNheSBoaQpEaWQgeW91IHN0b3A/IE5vLCBJIGp1c3QgZHJvdmUg\
          YnkK")
             .unwrap();
-    let prefix = fromhex("707e8df2087691cf209d9660c6ae1f9982305b848c0e3597365facb808be27e016f98500e6")
-        .unwrap();
+    let prefix = fromhex("707e8df2087691cf209d9660c6ae1f9982305b848c0e3597365facb808be27e0\
+                          16f98500e6")
+            .unwrap();
     let key = [1u8; 16];
 
     let mut cleartext = prefix

@@ -1,7 +1,6 @@
 use base64::decode;
 use aes::decrypt_crt;
 
-
 pub fn challenge18() {
     let ciphertext = decode("L77na/nrFsKvynd6HzOoG7GHTLXsTVu9qvY\
                             /2syLXzhPweyyMTJULu/6/kXX0KSvoOLSFQ==")

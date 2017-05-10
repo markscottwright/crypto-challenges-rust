@@ -217,7 +217,7 @@ pub fn challenge17() {
 
 #[test]
 fn test() {
-    for _ in 0..1000 {
+    for _ in 0..100 {
         let (ciphertext, iv) = get_encrypted_string();
         assert!(ciphertext_padding_valid(&ciphertext, &iv));
     }
