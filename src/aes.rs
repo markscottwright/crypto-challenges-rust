@@ -1,4 +1,4 @@
-use bytes::{inplace_xor, repeat_xor, random_bytes};
+use bytes::{inplace_xor, repeat_xor};
 use crypto::{symmetriccipher, buffer, aes, blockmodes};
 use crypto::buffer::{BufferResult, WriteBuffer, ReadBuffer};
 
@@ -229,10 +229,14 @@ fn test_mirror() {
 
 #[test]
 fn test_crt() {
+    use bytes::random_bytes;
+
     for _ in 0..10 {
         for i in 1..200 {
             let key = [5u8; 16];
             let cleartext = random_bytes(i);
+
+            // reuse byte len as nonce.
             let ciphertext = encrypt_crt(&cleartext, &key, i as u64).unwrap();
             let cleartext2 = decrypt_crt(&ciphertext, &key, i as u64).unwrap();
             assert_eq!(cleartext, cleartext2);
