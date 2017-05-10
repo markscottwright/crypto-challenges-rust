@@ -18,9 +18,9 @@ fn oracle(data: &[u8]) -> Result<Vec<u8>, symmetriccipher::SymmetricCipherError>
 
     let mut cleartext = prefix
         .iter()
+        .chain(data.iter())
+        .chain(suffix.iter())
         .cloned()
-        .chain(data.iter().cloned())
-        .chain(suffix.iter().cloned())
         .collect::<Vec<u8>>();
     cleartext = pad(cleartext, key.len());
 

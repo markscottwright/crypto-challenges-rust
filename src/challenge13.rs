@@ -66,8 +66,8 @@ pub fn challenge13() {
 
     let attack = blocks_ending_with_role
         .iter()
+        .chain(block_starting_with_admin.iter())
         .cloned()
-        .chain(block_starting_with_admin.iter().cloned())
         .collect::<Vec<u8>>();
     let attack_profile = decrypt(&attack);
     println!("{:?}", attack_profile);

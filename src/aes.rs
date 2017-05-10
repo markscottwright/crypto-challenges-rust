@@ -1,4 +1,4 @@
-use bytes::{inplace_xor, repeat_xor};
+use bytes::{inplace_xor, repeat_xor, random_bytes};
 use crypto::{symmetriccipher, buffer, aes, blockmodes};
 use crypto::buffer::{BufferResult, WriteBuffer, ReadBuffer};
 
@@ -199,6 +199,15 @@ pub fn decrypt_crt(ciphertext: &[u8],
     Ok(cleartext)
 }
 
+// it's just the reverse of decrypt_crt
+pub fn encrypt_crt(cleartext: &[u8],
+                   key: &[u8],
+                   nonce: u64)
+                   -> Result<Vec<u8>, symmetriccipher::SymmetricCipherError> {
+    decrypt_crt(cleartext, key, nonce)
+}
+
+
 #[test]
 fn test() {
     let data = b"yellow submarine";
@@ -216,4 +225,17 @@ fn test_mirror() {
     let encrypted = encrypt_cbc(data, key, &[0u8; 16]).unwrap();
     let decrypted = decrypt_cbc(&encrypted, key, &[0u8; 16]).unwrap();
     assert_eq!(data, decrypted.as_slice());
+}
+
+#[test]
+fn test_crt() {
+    for _ in 0..10 {
+        for i in 1..200 {
+            let key = [5u8; 16];
+            let cleartext = random_bytes(i);
+            let ciphertext = encrypt_crt(&cleartext, &key, i as u64).unwrap();
+            let cleartext2 = decrypt_crt(&ciphertext, &key, i as u64).unwrap();
+            assert_eq!(cleartext, cleartext2);
+        }
+    }
 }
