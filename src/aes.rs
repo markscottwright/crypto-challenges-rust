@@ -171,27 +171,27 @@ pub fn encrypt_cbc(cleartext: &[u8],
     }
 }
 
-fn serialize_little_endian(val: u64, dest: &mut [u8]) {
+fn serialize_little_endian(val: &u64, dest: &mut [u8]) {
     dest[0] = (val & 0xff) as u8;
-    dest[1] = ((val >> 8) & 0xff) as u8;
-    dest[2] = ((val >> 16) & 0xff) as u8;
-    dest[3] = ((val >> 24) & 0xff) as u8;
-    dest[4] = ((val >> 32) & 0xff) as u8;
-    dest[5] = ((val >> 40) & 0xff) as u8;
-    dest[6] = ((val >> 48) & 0xff) as u8;
-    dest[7] = ((val >> 56) & 0xff) as u8;
+    dest[1] = ((val >> 8) & 0xffu64) as u8;
+    dest[2] = ((val >> 16) & 0xffu64) as u8;
+    dest[3] = ((val >> 24) & 0xffu64) as u8;
+    dest[4] = ((val >> 32) & 0xffu64) as u8;
+    dest[5] = ((val >> 40) & 0xffu64) as u8;
+    dest[6] = ((val >> 48) & 0xffu64) as u8;
+    dest[7] = ((val >> 56) & 0xffu64) as u8;
 }
 
-pub fn decrypt_crt(ciphertext: &[u8],
+pub fn decrypt_ctr(ciphertext: &[u8],
                    key: &[u8],
-                   nonce: u64)
+                   nonce: &u64)
                    -> Result<Vec<u8>, symmetriccipher::SymmetricCipherError> {
 
     let mut cleartext = Vec::with_capacity(ciphertext.len());
     let mut counter = [0u8; BLOCK_SIZE];
     serialize_little_endian(nonce, &mut counter[0..8]);
     for (i, block) in ciphertext.chunks(BLOCK_SIZE).enumerate() {
-        serialize_little_endian(i as u64, &mut counter[8..]);
+        serialize_little_endian(&(i as u64), &mut counter[8..]);
         let encrypted_counter = encrypt_ecb(&counter, &key).unwrap();
         cleartext.append(&mut repeat_xor(block, &encrypted_counter));
     }
@@ -199,12 +199,12 @@ pub fn decrypt_crt(ciphertext: &[u8],
     Ok(cleartext)
 }
 
-// it's just the reverse of decrypt_crt
-pub fn encrypt_crt(cleartext: &[u8],
+// it's just the reverse of decrypt_ctr
+pub fn encrypt_ctr(cleartext: &[u8],
                    key: &[u8],
-                   nonce: u64)
+                   nonce: &u64)
                    -> Result<Vec<u8>, symmetriccipher::SymmetricCipherError> {
-    decrypt_crt(cleartext, key, nonce)
+    decrypt_ctr(cleartext, key, nonce)
 }
 
 
@@ -228,7 +228,7 @@ fn test_mirror() {
 }
 
 #[test]
-fn test_crt() {
+fn test_ctr() {
     use bytes::random_bytes;
 
     for _ in 0..10 {
@@ -237,8 +237,8 @@ fn test_crt() {
             let cleartext = random_bytes(i);
 
             // reuse byte len as nonce.
-            let ciphertext = encrypt_crt(&cleartext, &key, i as u64).unwrap();
-            let cleartext2 = decrypt_crt(&ciphertext, &key, i as u64).unwrap();
+            let ciphertext = encrypt_ctr(&cleartext, &key, &(i as u64)).unwrap();
+            let cleartext2 = decrypt_ctr(&ciphertext, &key, &(i as u64)).unwrap();
             assert_eq!(cleartext, cleartext2);
         }
     }

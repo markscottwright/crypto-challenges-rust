@@ -21,6 +21,8 @@ mod challenge19;
 extern crate base64;
 extern crate crypto;
 extern crate rand;
+#[macro_use]
+extern crate itertools;
 
 use std::time::Instant;
 use std::env;
