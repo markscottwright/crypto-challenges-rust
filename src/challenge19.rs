@@ -1,6 +1,28 @@
 use base64::decode;
 use aes::encrypt_ctr;
 use std::collections::HashMap;
+use std::cmp::min;
+
+lazy_static! {
+
+    // load a set of sorted words into a vector
+    static ref SORTED_ENGLISH_WORDS: Vec<&'static str> = {
+        include_str!("google-10000-english-usa-sorted.txt")
+            .lines()
+            .collect::<Vec<_>>()
+        };
+}
+
+fn is_english_prefix(guess: &str) -> bool {
+    let lc_guess = guess.to_lowercase();
+    let guess_len = guess.len();
+    SORTED_ENGLISH_WORDS
+        .binary_search_by(|&w| {
+                              let w_len = min(w.len(), guess_len);
+                              w.cmp(&lc_guess)
+                          })
+        .is_ok()
+}
 
 pub fn byte_histogram(bytes: &[u8]) -> Vec<usize> {
     let mut histogram = vec![0;256];
@@ -66,6 +88,30 @@ pub fn bytes_by_frequency(histogram: &[usize]) -> Vec<u8> {
  *
  */
 
+
+/*
+ *  let x = index_of_longest_ciphertext 
+ *  fn solve(x, ciphertexts, &mut key) -> Some<key>
+ *  {
+ *      let i = key.len()
+ *      if ciphertexts[x].len() == i {
+ *          Some(key.clone())
+ *      }
+ *
+ *      for guess in ordered_characters {
+ *          let k = ciphertexts[x][i] ^ c;
+ *          key.push(k);
+ *          if ciphertexts.iter().map(|c| good_key(key, c)).all() {
+ *              if let Some(key2) = solve(x, ciphertexts, key)
+ *                  return Some(key2)
+ *          }
+ *          key.pop(k)
+ *      }
+ *      None
+ *  }
+ *
+ */
+
 pub fn make_mapping(bytes_by_frequency: &[u8]) -> HashMap<u8, char> {
     let letters_by_freq = "etaoinshrdlcumwfgypbvkjxqz";
     bytes_by_frequency
@@ -115,4 +161,12 @@ pub fn challenge19() {
         let s: String = cleartext.into_iter().collect();
         println!("{}", s);
     }
+
+}
+
+#[test]
+fn test_prefix() {
+    assert!(is_english_prefix("a"));
+    assert!(is_english_prefix("Az"));
+    assert!(!is_english_prefix("zt"));
 }
