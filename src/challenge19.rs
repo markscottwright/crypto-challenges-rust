@@ -90,7 +90,7 @@ pub fn bytes_by_frequency(histogram: &[usize]) -> Vec<u8> {
 
 
 /*
- *  let x = index_of_longest_ciphertext 
+ *  let x = index_of_longest_ciphertext
  *  fn solve(x, ciphertexts, &mut key) -> Some<key>
  *  {
  *      let i = key.len()
@@ -119,6 +119,95 @@ pub fn make_mapping(bytes_by_frequency: &[u8]) -> HashMap<u8, char> {
         .cloned()
         .zip(letters_by_freq.chars())
         .collect::<HashMap<_, _>>()
+}
+
+fn is_valid_character(byte: &u8) -> bool {
+    b"etaoinshrdlcumwfgypbvkjxqz 0123456789'?.,!\"ETAOINSHRDLCUMWFGYPBVKJXQZ".contains(byte)
+}
+
+fn is_space_or_punctuation(byte: &u8) -> bool {
+    b" ?.,!\"".contains(byte)
+}
+
+fn is_valid_word_character(byte: &u8) -> bool {
+    b"etaoinshrdlcumwfgypbvkjxqz0123456789'ETAOINSHRDLCUMWFGYPBVKJXQZ".contains(byte)
+}
+
+fn good_key_so_far(key_so_far: &[u8], ciphertext: &[u8]) -> bool {
+
+    let cleartext = key_so_far
+        .iter()
+        .zip(ciphertext.iter())
+        .map(|(a, b)| a ^ b)
+        .collect::<Vec<_>>();
+
+    // is the last byte of cleartext ascii?
+    let last_letter = cleartext.last().unwrap();
+
+    if is_valid_character(&last_letter) {
+        return false;
+    }
+
+    else if is_space_or_punctuation(&last_letter) {
+        // We just added a word divider.  Check the word before to confirm its
+        // an actual word.
+        let last_word = cleartext.iter().rev().skip(1).take_while(|x|
+            is_valid_word_character(x))
+            .collect()
+            .iter()
+            .rev()
+            .collect();
+
+        // TODO is_english_word?
+        // multiple spaces, or an actual word
+        last_word.len() == 0 || is_english_prefix(last_word)
+    }
+
+    else {
+        // in the middle of a word - is the word we building a possible word?
+        let last_word = cleartext.iter().rev().take_while(|x|
+            is_valid_word_character(x))
+            .reverse()
+            .collect();
+
+        is_english_prefix(last_word)
+    }
+
+    false
+}
+
+fn solve_repeated_pad(ciphertexts: &Vec<Vec<u8>>,
+                      target_index: usize,
+                      key_so_far: &mut Vec<u8>)
+                      -> Option<Vec<u8>> {
+    let i = key_so_far.len();
+
+    // key is as long as the target ciphertext - we're done
+    if ciphertexts[target_index].len() == i {
+        return Some(key_so_far.clone());
+    }
+
+
+    // first letter is more likely uppercase
+    let letters_by_freq = match i {
+        0 => {"ETAOINSHRDLCUMWFGYPBVKJXQZetaoinshrdlcumwfgypbvkjxqz 0123456789'\"?.,!"}
+        _ => {"etaoinshrdlcumwfgypbvkjxqz 0123456789'\"?.,!ETAOINSHRDLCUMWFGYPBVKJXQZ"}
+    };
+
+    for guess in letters_by_freq.chars() {
+        let key_byte = ciphertexts[target_index][i] ^ (guess as u8);
+        key_so_far.push(key_byte);
+        if ciphertexts
+               .iter()
+               .all(|c| good_key_so_far(key_so_far, c)) {
+            if let Some(answer) = solve_repeated_pad(ciphertexts, target_index, key_so_far) {
+                return Some(answer);
+            }
+        }
+        key_so_far.pop();
+    }
+
+    None
 }
 
 pub fn challenge19() {
