@@ -25,7 +25,7 @@ fn is_number(guess: &str) -> bool {
 fn is_english_word(guess: &str) -> bool {
     let lc_guess = guess.to_lowercase();
     SORTED_ENGLISH_WORDS
-        .binary_search_by(|&w| {w.cmp(&lc_guess)})
+        .binary_search_by(|&w| w.cmp(&lc_guess))
         .is_ok()
 }
 
@@ -79,10 +79,11 @@ fn good_key_so_far(key_so_far: &[u8], ciphertext: &[u8]) -> bool {
 
         // multiple spaces, or an actual word
         let last_word_str: String = last_word.into_iter().collect();
-        let rc = last_word_str.len() == 0 || is_number(&last_word_str) || is_english_word(&last_word_str);
+        let rc = last_word_str.len() == 0 || is_number(&last_word_str) ||
+                 is_english_word(&last_word_str);
         return rc;
     } else {
-        // in the middle of a word - is the word we building a possible word?
+        // in the middle of a word - is the word we are building a possible word?
         let mut last_word = cleartext
             .iter()
             .rev()
@@ -151,6 +152,7 @@ pub fn challenge19() {
         .map(|cleartext| encrypt_ctr(cleartext, key, &nonce).unwrap())
         .collect::<Vec<_>>();
 
+    // find the longest of ciphertexts - when we decode that one, we're done
     let mut max_len = 0;
     let mut longest_ciphertext = 0;
     for i in 0..ciphertexts.len() {
@@ -163,19 +165,19 @@ pub fn challenge19() {
     if let Some(key) = solve_repeated_pad(&ciphertexts, longest_ciphertext, &mut vec![]) {
         println!("key = {:?}", &key);
         for c in ciphertexts {
-            let cleartext = key
-                .iter()
+            let cleartext = key.iter()
                 .zip(c.iter())
                 .map(|(a, b)| a ^ b)
                 .collect::<Vec<_>>();
             println!("{:?}", String::from_utf8_lossy(&cleartext));
         }
-    }
-    else {
+    } else {
         println!("Didn't find a solution.  Best we did:");
 
         for c in ciphertexts {
-            let cleartext = BEST_ANSWER.lock().unwrap()
+            let cleartext = BEST_ANSWER
+                .lock()
+                .unwrap()
                 .iter()
                 .zip(c.iter())
                 .map(|(a, b)| a ^ b)
