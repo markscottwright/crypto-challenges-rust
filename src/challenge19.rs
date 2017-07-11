@@ -2,15 +2,25 @@ use base64::decode;
 use aes::encrypt_ctr;
 use std::collections::HashMap;
 use std::cmp::min;
+use std::sync::Mutex;
 
 lazy_static! {
 
     // load a set of sorted words into a vector
     static ref SORTED_ENGLISH_WORDS: Vec<&'static str> = {
-        include_str!("google-10000-english-usa-sorted.txt")
+        // include_str!("google-10000-english-usa-sorted.txt")
+        include_str!("words-sorted.txt")
             .lines()
             .collect::<Vec<_>>()
         };
+
+    static ref BEST_ANSWER: Mutex<Vec<u8>> = Mutex::new(vec![]);
+}
+
+fn is_number(guess: &str) -> bool {
+    let numbers = "0123456789";
+
+    guess.chars().all(|c| numbers.contains(c))
 }
 
 fn is_english_prefix(guess: &str) -> bool {
@@ -19,7 +29,7 @@ fn is_english_prefix(guess: &str) -> bool {
     SORTED_ENGLISH_WORDS
         .binary_search_by(|&w| {
                               let w_len = min(w.len(), guess_len);
-                              w.cmp(&lc_guess)
+                              w[..w_len].cmp(&lc_guess)
                           })
         .is_ok()
 }
@@ -122,15 +132,15 @@ pub fn make_mapping(bytes_by_frequency: &[u8]) -> HashMap<u8, char> {
 }
 
 fn is_valid_character(byte: &u8) -> bool {
-    b"etaoinshrdlcumwfgypbvkjxqz 0123456789'?.,!\"ETAOINSHRDLCUMWFGYPBVKJXQZ".contains(byte)
+    b"etaoinshrdlcumwfgypbvkjxqz 0123456789-'?:;.,!\"&ETAOINSHRDLCUMWFGYPBVKJXQZ".contains(byte)
 }
 
 fn is_space_or_punctuation(byte: &u8) -> bool {
-    b" ?.,!\"".contains(byte)
+    b" -?:;.,!\"\'&".contains(byte)
 }
 
 fn is_valid_word_character(byte: &u8) -> bool {
-    b"etaoinshrdlcumwfgypbvkjxqz0123456789'ETAOINSHRDLCUMWFGYPBVKJXQZ".contains(byte)
+    b"etaoinshrdlcumwfgypbvkjxqz0123456789ETAOINSHRDLCUMWFGYPBVKJXQZ".contains(byte)
 }
 
 fn good_key_so_far(key_so_far: &[u8], ciphertext: &[u8]) -> bool {
@@ -144,36 +154,38 @@ fn good_key_so_far(key_so_far: &[u8], ciphertext: &[u8]) -> bool {
     // is the last byte of cleartext ascii?
     let last_letter = cleartext.last().unwrap();
 
-    if is_valid_character(&last_letter) {
+    if !is_valid_character(&last_letter) {
         return false;
-    }
-
-    else if is_space_or_punctuation(&last_letter) {
+    } else if is_space_or_punctuation(&last_letter) {
         // We just added a word divider.  Check the word before to confirm its
         // an actual word.
-        let last_word = cleartext.iter().rev().skip(1).take_while(|x|
-            is_valid_word_character(x))
-            .collect()
+        let mut last_word = cleartext
             .iter()
             .rev()
-            .collect();
+            .skip(1)
+            .take_while(|x| is_valid_word_character(x))
+            .map(|&x| x as char)
+            .collect::<Vec<_>>();
+        last_word.reverse();
 
-        // TODO is_english_word?
         // multiple spaces, or an actual word
-        last_word.len() == 0 || is_english_prefix(last_word)
-    }
-
-    else {
+        let last_word_str: String = last_word.into_iter().collect();
+        let rc = last_word_str.len() == 0 || is_number(&last_word_str) || is_english_prefix(&last_word_str);
+        return rc;
+    } else {
         // in the middle of a word - is the word we building a possible word?
-        let last_word = cleartext.iter().rev().take_while(|x|
-            is_valid_word_character(x))
-            .reverse()
-            .collect();
+        let mut last_word = cleartext
+            .iter()
+            .rev()
+            .take_while(|x| is_valid_word_character(x))
+            .map(|&x| x as char)
+            .collect::<Vec<_>>();
+        last_word.reverse();
+        let last_word_str: String = last_word.into_iter().collect();
 
-        is_english_prefix(last_word)
+        let rc = is_number(&last_word_str) || is_english_prefix(&last_word_str);
+        return rc;
     }
-
-    false
 }
 
 fn solve_repeated_pad(ciphertexts: &Vec<Vec<u8>>,
@@ -187,11 +199,10 @@ fn solve_repeated_pad(ciphertexts: &Vec<Vec<u8>>,
         return Some(key_so_far.clone());
     }
 
-
     // first letter is more likely uppercase
     let letters_by_freq = match i {
-        0 => {"ETAOINSHRDLCUMWFGYPBVKJXQZetaoinshrdlcumwfgypbvkjxqz 0123456789'\"?.,!"}
-        _ => {"etaoinshrdlcumwfgypbvkjxqz 0123456789'\"?.,!ETAOINSHRDLCUMWFGYPBVKJXQZ"}
+        0 => "ETAOINSHRDLCUMWFGYPBVKJXQZetaoinshrdlcumwfgypbvkjxqz 0123456789'\"?.,!",
+        _ => "etaoinshrdlcumwfgypbvkjxqz 0123456789'\"?.,!ETAOINSHRDLCUMWFGYPBVKJXQZ",
     };
 
     for guess in letters_by_freq.chars() {
@@ -200,6 +211,11 @@ fn solve_repeated_pad(ciphertexts: &Vec<Vec<u8>>,
         if ciphertexts
                .iter()
                .all(|c| good_key_so_far(key_so_far, c)) {
+
+            if key_so_far.len() > BEST_ANSWER.lock().unwrap().len() {
+                *(BEST_ANSWER.lock().unwrap()) = key_so_far.clone();
+            }
+
             if let Some(answer) = solve_repeated_pad(ciphertexts, target_index, key_so_far) {
                 return Some(answer);
             }
@@ -222,40 +238,26 @@ pub fn challenge19() {
         .map(|cleartext| encrypt_ctr(cleartext, key, &nonce).unwrap())
         .collect::<Vec<_>>();
 
-    // our decryptions
-    let mut cleartexts2: Vec<Vec<char>> = Vec::with_capacity(ciphertexts.len());
-    for _ in 0..ciphertexts.len() {
-        cleartexts2.push(Vec::new());
-    }
+    if let Some(key) = solve_repeated_pad(&ciphertexts, 0, &mut vec![]) {
+        println!("key = {:?}", &key);
 
-    let max_ciphertext_len = ciphertexts.iter().map(|x| x.len()).max().unwrap();
-    println!("{:?}", max_ciphertext_len);
-    for i in 0..max_ciphertext_len {
-        let ith_bytes = ciphertexts
-            .iter()
-            .filter_map(|x| x.get(i))
-            .cloned()
-            .collect::<Vec<_>>();
-        let histogram = byte_histogram(&ith_bytes);
-        let bytes_by_frequency = bytes_by_frequency(&histogram);
-        let mapping = make_mapping(&bytes_by_frequency);
-        for (ciphertext, mut cleartext) in ciphertexts.iter().zip(cleartexts2.iter_mut()) {
-            if let Some(byte) = ciphertext.get(i) {
-                cleartext.push(*mapping.get(byte).unwrap());
-            }
+    //    println!("best answer len = {:?}", BEST_ANSWER.lock().unwrap().len());
+    //    let best_key = BEST_ANSWER.lock().unwrap();
+        for c in ciphertexts {
+            let cleartext = key
+                .iter()
+                .zip(c.iter())
+                .map(|(a, b)| a ^ b)
+                .collect::<Vec<_>>();
+            println!("{:?}", String::from_utf8_lossy(&cleartext));
         }
     }
-
-    for cleartext in cleartexts2 {
-        let s: String = cleartext.into_iter().collect();
-        println!("{}", s);
-    }
-
 }
 
 #[test]
 fn test_prefix() {
     assert!(is_english_prefix("a"));
     assert!(is_english_prefix("Az"));
+    assert!(is_english_prefix("Ei"));
     assert!(!is_english_prefix("zt"));
 }

@@ -2914,6 +2914,7 @@ egypt
 egyptian
 eh
 eight
+eighteen
 either
 ejaculation
 el
@@ -6755,6 +6756,7 @@ policies
 policy
 polish
 polished
+polite
 political
 politicians
 politics
