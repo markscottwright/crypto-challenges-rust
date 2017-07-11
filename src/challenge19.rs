@@ -1,6 +1,5 @@
 use base64::decode;
 use aes::encrypt_ctr;
-use std::collections::HashMap;
 use std::cmp::min;
 use std::sync::Mutex;
 
@@ -8,17 +7,26 @@ lazy_static! {
 
     // load a set of sorted words into a vector
     static ref SORTED_ENGLISH_WORDS: Vec<&'static str> = {
-        // include_str!("google-10000-english-usa-sorted.txt")
+        //include_str!("google-10000-english-usa-sorted.txt")
         include_str!("words-sorted.txt")
             .lines()
             .collect::<Vec<_>>()
         };
+
+    static ref BEST_ANSWER: Mutex<Vec<u8>> = Mutex::new(vec![]);
 }
 
 fn is_number(guess: &str) -> bool {
     let numbers = "0123456789";
 
     guess.chars().all(|c| numbers.contains(c))
+}
+
+fn is_english_word(guess: &str) -> bool {
+    let lc_guess = guess.to_lowercase();
+    SORTED_ENGLISH_WORDS
+        .binary_search_by(|&w| {w.cmp(&lc_guess)})
+        .is_ok()
 }
 
 fn is_english_prefix(guess: &str) -> bool {
@@ -30,103 +38,6 @@ fn is_english_prefix(guess: &str) -> bool {
                               w[..w_len].cmp(&lc_guess)
                           })
         .is_ok()
-}
-
-pub fn byte_histogram(bytes: &[u8]) -> Vec<usize> {
-    let mut histogram = vec![0;256];
-    for b in bytes {
-        histogram[*b as usize] += 1;
-    }
-    histogram
-}
-
-pub fn bytes_by_frequency(histogram: &[usize]) -> Vec<u8> {
-    let mut bytes = (0..255).collect::<Vec<u8>>();
-    bytes.sort_by_key(|b| histogram[*b as usize]);
-    bytes.reverse();
-    bytes
-        .iter()
-        .cloned()
-        .filter(|b| histogram[*b as usize] != 0)
-        .collect()
-}
-
-/*
- * Letter frequency: "etaoinshrdlcumwfgypbvkjxqz"
- * Letter frequency, with punctation and spaces: " et.?-'aoinshrdlcumwfgypbvkjxqz"
- *
- * This is both hard and apparently unnecessary.  But, what we need is something like an iterator
- * that generates possible key bytes, ordered using the histogram, then rates the englishness of the
- * results.
- *
- * Note that we should go through this, creating a list of [[byte -> letter,...], ...].  At each
- * position, the byte->letter should be varied by one, and we should test the resulting cleartexts
- * for "englishness" by splitting on the last whitespace (or punctuation?) and confirming that the
- * tail string is a possible english word's prefix.
- *
- * for pos in 0..longest_ciphertext {
- *  for mapping in mappings(histogram[pos]) {
- *      let good_mapping =
- *      for i in ciphertexts.len() {
- *          if !is_possible_english(cleartexts_so_far[i] + decode(ciphertexts[i][pos], mapping))
- *              break
- *      }
- *  }
- * }
- *
- * fn generate_maps(pos, cleartexts, ciphertexts, mappings_so_far: Vec<Map<byte, char>>) -> Some(Vec<Map<byte, char>>) {
- *  if pos == max_len(ciphertexts)
- *      return mappings_so_far
- *
- *  for mapping in histogram(ciphertexts, pos) {
- *      let mapping_is_good = (0..ciphertexts.len)
- *          .map(|i| isenglish(cleartexts[i] + mapping[ciphertexts[i][pos]]))
- *          .all()
- *      if mapping_is_good {
- *          new_cleartexts = append mapping to cleartexts at pos
- *          new_mappings = mappings_so_far + mapping;
- *          if let Some(full_mapping) = generate_maps(pos, new_cleartexts, ciphertexts, new_mappings) {
- *              return Some(full_mapping)
- *          }
- *      }
- *  }
- *
- *  None
- * }
- *
- */
-
-
-/*
- *  let x = index_of_longest_ciphertext
- *  fn solve(x, ciphertexts, &mut key) -> Some<key>
- *  {
- *      let i = key.len()
- *      if ciphertexts[x].len() == i {
- *          Some(key.clone())
- *      }
- *
- *      for guess in ordered_characters {
- *          let k = ciphertexts[x][i] ^ c;
- *          key.push(k);
- *          if ciphertexts.iter().map(|c| good_key(key, c)).all() {
- *              if let Some(key2) = solve(x, ciphertexts, key)
- *                  return Some(key2)
- *          }
- *          key.pop(k)
- *      }
- *      None
- *  }
- *
- */
-
-pub fn make_mapping(bytes_by_frequency: &[u8]) -> HashMap<u8, char> {
-    let letters_by_freq = "etaoinshrdlcumwfgypbvkjxqz";
-    bytes_by_frequency
-        .iter()
-        .cloned()
-        .zip(letters_by_freq.chars())
-        .collect::<HashMap<_, _>>()
 }
 
 fn is_valid_character(byte: &u8) -> bool {
@@ -168,7 +79,7 @@ fn good_key_so_far(key_so_far: &[u8], ciphertext: &[u8]) -> bool {
 
         // multiple spaces, or an actual word
         let last_word_str: String = last_word.into_iter().collect();
-        let rc = last_word_str.len() == 0 || is_number(&last_word_str) || is_english_prefix(&last_word_str);
+        let rc = last_word_str.len() == 0 || is_number(&last_word_str) || is_english_word(&last_word_str);
         return rc;
     } else {
         // in the middle of a word - is the word we building a possible word?
@@ -210,6 +121,11 @@ fn solve_repeated_pad(ciphertexts: &Vec<Vec<u8>>,
                .iter()
                .all(|c| good_key_so_far(key_so_far, c)) {
 
+            // keep track of our best solution out-of-band
+            if key_so_far.len() > BEST_ANSWER.lock().unwrap().len() {
+                *(BEST_ANSWER.lock().unwrap()) = key_so_far.clone();
+            }
+
             if let Some(answer) = solve_repeated_pad(ciphertexts, target_index, key_so_far) {
                 return Some(answer);
             }
@@ -220,6 +136,9 @@ fn solve_repeated_pad(ciphertexts: &Vec<Vec<u8>>,
     None
 }
 
+// Note: because all the cleartexts are not the same length, and we're being very permissive with
+// what constitutes a "word", the ends of the longest ciphertexts are harder to find.  The challenge
+// said specifically "don't overthink this", so good enough.
 pub fn challenge19() {
     let key = b"YELLOW SUBMARINE";
     let nonce = 0;
@@ -232,10 +151,31 @@ pub fn challenge19() {
         .map(|cleartext| encrypt_ctr(cleartext, key, &nonce).unwrap())
         .collect::<Vec<_>>();
 
-    if let Some(key) = solve_repeated_pad(&ciphertexts, 0, &mut vec![]) {
+    let mut max_len = 0;
+    let mut longest_ciphertext = 0;
+    for i in 0..ciphertexts.len() {
+        if ciphertexts[i].len() > max_len {
+            max_len = ciphertexts[i].len();
+            longest_ciphertext = i;
+        }
+    }
+
+    if let Some(key) = solve_repeated_pad(&ciphertexts, longest_ciphertext, &mut vec![]) {
         println!("key = {:?}", &key);
         for c in ciphertexts {
             let cleartext = key
+                .iter()
+                .zip(c.iter())
+                .map(|(a, b)| a ^ b)
+                .collect::<Vec<_>>();
+            println!("{:?}", String::from_utf8_lossy(&cleartext));
+        }
+    }
+    else {
+        println!("Didn't find a solution.  Best we did:");
+
+        for c in ciphertexts {
+            let cleartext = BEST_ANSWER.lock().unwrap()
                 .iter()
                 .zip(c.iter())
                 .map(|(a, b)| a ^ b)

@@ -22,8 +22,6 @@ extern crate base64;
 extern crate crypto;
 extern crate rand;
 #[macro_use]
-extern crate itertools;
-#[macro_use]
 extern crate lazy_static;
 
 use std::time::Instant;
