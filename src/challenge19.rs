@@ -13,8 +13,6 @@ lazy_static! {
             .lines()
             .collect::<Vec<_>>()
         };
-
-    static ref BEST_ANSWER: Mutex<Vec<u8>> = Mutex::new(vec![]);
 }
 
 fn is_number(guess: &str) -> bool {
@@ -212,10 +210,6 @@ fn solve_repeated_pad(ciphertexts: &Vec<Vec<u8>>,
                .iter()
                .all(|c| good_key_so_far(key_so_far, c)) {
 
-            if key_so_far.len() > BEST_ANSWER.lock().unwrap().len() {
-                *(BEST_ANSWER.lock().unwrap()) = key_so_far.clone();
-            }
-
             if let Some(answer) = solve_repeated_pad(ciphertexts, target_index, key_so_far) {
                 return Some(answer);
             }
@@ -240,9 +234,6 @@ pub fn challenge19() {
 
     if let Some(key) = solve_repeated_pad(&ciphertexts, 0, &mut vec![]) {
         println!("key = {:?}", &key);
-
-    //    println!("best answer len = {:?}", BEST_ANSWER.lock().unwrap().len());
-    //    let best_key = BEST_ANSWER.lock().unwrap();
         for c in ciphertexts {
             let cleartext = key
                 .iter()
