@@ -82,6 +82,22 @@ fn good_key_so_far(key_so_far: &[u8], ciphertext: &[u8]) -> bool {
         let rc = last_word_str.len() == 0 || is_number(&last_word_str) ||
                  is_english_word(&last_word_str);
         return rc;
+    } else if key_so_far.len() == ciphertext.len() {
+
+        // We've reached the last character in the cipher text - last word should be a real word
+        let mut last_word = cleartext
+            .iter()
+            .rev()
+            .take_while(|x| is_valid_word_character(x))
+            .map(|&x| x as char)
+            .collect::<Vec<_>>();
+        last_word.reverse();
+
+        // multiple spaces, or an actual word
+        let last_word_str: String = last_word.into_iter().collect();
+        let rc = last_word_str.len() == 0 || is_number(&last_word_str) ||
+                 is_english_word(&last_word_str);
+        return rc;
     } else {
         // in the middle of a word - is the word we are building a possible word?
         let mut last_word = cleartext
