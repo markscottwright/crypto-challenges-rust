@@ -7,8 +7,8 @@ lazy_static! {
 
     // load a set of sorted words into a vector
     static ref SORTED_ENGLISH_WORDS: Vec<&'static str> = {
-        //include_str!("google-10000-english-usa-sorted.txt")
-        include_str!("words-sorted.txt")
+        include_str!("google-10000-english-usa-sorted.txt")
+        //include_str!("words-sorted.txt")
             .lines()
             .collect::<Vec<_>>()
         };
