@@ -185,7 +185,7 @@ pub fn challenge19() {
                 .zip(c.iter())
                 .map(|(a, b)| a ^ b)
                 .collect::<Vec<_>>();
-            println!("{:?}", String::from_utf8_lossy(&cleartext));
+            println!("{}", String::from_utf8_lossy(&cleartext));
         }
     } else {
         println!("Didn't find a solution.  Best we did:");
@@ -198,7 +198,7 @@ pub fn challenge19() {
                 .zip(c.iter())
                 .map(|(a, b)| a ^ b)
                 .collect::<Vec<_>>();
-            println!("{:?}", String::from_utf8_lossy(&cleartext));
+            println!("{}", String::from_utf8_lossy(&cleartext));
         }
     }
 }
