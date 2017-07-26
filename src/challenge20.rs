@@ -12,6 +12,7 @@ pub fn solve_repeated_xor(ciphertext: &[u8], keysize: usize) -> Vec<u8> {
     key
 }
 
+// concatenate all of the first prefix_len bytes of vecs into one vec
 fn concat_prefixes(vecs: &Vec<Vec<u8>>, prefix_len: usize) -> Vec<u8> {
     let mut concatted: Vec<u8> = Vec::new();
     for c in vecs {
