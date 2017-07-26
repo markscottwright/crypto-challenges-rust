@@ -16,21 +16,21 @@ pub fn random_bytes(n: usize) -> Vec<u8> {
     (0..n).map(|_| rand_u8()).collect::<Vec<u8>>()
 }
 
-// what percentage of characters are likely to be found in english text?
+// Give a rating of how much this text looks like english, divided by the length
 pub fn englishness(cleartext: &[u8]) -> f32 {
     let num_english_chars: u32 = cleartext
         .iter()
         .map(|c| match *c as char {
                  '0'...'9' => 1,
-                 'a'...'z' => 1,
-                 'A'...'Z' => 1,
+                 'a'...'z' => 10,
+                 'A'...'Z' => 10,
                  '-' => 1,
-                 ' ' => 1,
-                 '\'' => 1,
+                 ' ' => 5,
+                 '\'' => 2,
                  '\"' => 1,
-                 '.' => 1,
+                 '.' => 5,
                  '!' => 1,
-                 '?' => 1,
+                 '?' => 5,
                  '\n' => 1,
                  _ => 0,
              })
